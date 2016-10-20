@@ -125,8 +125,8 @@ $(document).ready(function () {
 
 <div id="learning-log-assignments" class="section level2">
 <h2>Learning log assignments</h2>
-<p>Favorite aspects: learn how to use R Markdown</p>
-<p>Superfluous aspects: none, since not all of us have used R before</p>
+<p>Favorite aspects: learn how to use R Markdown and GitHub</p>
+<p>Superfluous aspects: none, since not every student was familiar with R</p>
 <p>Eureka effect: that´s how a repository works!!</p>
 <p>Links to what I’ve learned so far: no news about r-programming</p>
 <pre class="r"><code>##Assign the value of 2 to a variable called a and the value of 5 to a variable called b
@@ -137,24 +137,32 @@ r1&lt;-a+b
 r2&lt;-a-b
 r3&lt;-a*b
 r4&lt;-a/b
-##Create a vector v1 with variables from step 2
+##create a vector v1 which contains the values stored within the four variables from step 2
 v1&lt;-(c(r1,r2,r3,r4))
 ##Add a fifth entry to vector v1 
 r5&lt;-a**b
+v1 &lt;-(c(r1, r2, r3, r4, r5))
+#or
 v1[5]&lt;-r5
 #or
-v1&lt;-(c(r1,r2,r3,r4))
 v1[5]&lt;-a**b
 #or
 v1&lt;-(c(r1,r2,r3,r4))
 v1&lt;-append(v1, r5,5)
 ##Create a second vector v2 with information on operation type
 v2&lt;-c(&quot;sum&quot;,&quot;difference&quot;, &quot;product&quot;, &quot;ratio&quot;, &quot;power&quot;)
-##Show the content of vector v2 
+##Show v2 
 print(v2)</code></pre>
 <pre><code>## [1] &quot;sum&quot;        &quot;difference&quot; &quot;product&quot;    &quot;ratio&quot;      &quot;power&quot;</code></pre>
-<pre class="r"><code>##combine the two vectors v1 and v2 into a data frame and Name the columns
+<pre class="r"><code>#or
+v2</code></pre>
+<pre><code>## [1] &quot;sum&quot;        &quot;difference&quot; &quot;product&quot;    &quot;ratio&quot;      &quot;power&quot;</code></pre>
+<pre class="r"><code>##combine v1 and v2 into a data frame each vector should become one column
+df &lt;- data.frame(v1,v2)
+##Make sure that the column with the data of v1 is named &quot;Results&quot; and v2 is named &quot;Operation&quot;
 df&lt;-data.frame(Results=v1, Operation=v2)
+#or
+colnames (df) &lt;- c(&quot;Results&quot;, &quot;Operation&quot;)
 ##show entire content
 df</code></pre>
 <pre><code>##   Results  Operation
@@ -165,6 +173,9 @@ df</code></pre>
 ## 5    32.0      power</code></pre>
 <pre class="r"><code>##show content of 3 row and 1 column
 df[3,1]</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre class="r"><code>#or
+df$Results[3]</code></pre>
 <pre><code>## [1] 10</code></pre>
 </div>
 

@@ -11,9 +11,9 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Learning log assignments
 
-Favorite aspects: learn how to use R Markdown
+Favorite aspects: learn how to use R Markdown and GitHub
 
-Superfluous aspects: none, since not all of us have used R before
+Superfluous aspects: none, since not every student was familiar with R
 
 Eureka effect: that´s how a repository works!!
 
@@ -28,26 +28,35 @@ r1<-a+b
 r2<-a-b
 r3<-a*b
 r4<-a/b
-##Create a vector v1 with variables from step 2
+##create a vector v1 which contains the values stored within the four variables from step 2
 v1<-(c(r1,r2,r3,r4))
 ##Add a fifth entry to vector v1 
 r5<-a**b
+v1 <-(c(r1, r2, r3, r4, r5))
+#or
 v1[5]<-r5
 #or
-v1<-(c(r1,r2,r3,r4))
 v1[5]<-a**b
 #or
 v1<-(c(r1,r2,r3,r4))
 v1<-append(v1, r5,5)
 ##Create a second vector v2 with information on operation type
 v2<-c("sum","difference", "product", "ratio", "power")
-##Show the content of vector v2 
+##Show v2 
 print(v2)
-##combine the two vectors v1 and v2 into a data frame and Name the columns
+#or
+v2
+##combine v1 and v2 into a data frame each vector should become one column
+df <- data.frame(v1,v2)
+##Make sure that the column with the data of v1 is named "Results" and v2 is named "Operation"
 df<-data.frame(Results=v1, Operation=v2)
+#or
+colnames (df) <- c("Results", "Operation")
 ##show entire content
 df
 ##show content of 3 row and 1 column
 df[3,1]
+#or
+df$Results[3]
 
 ```
