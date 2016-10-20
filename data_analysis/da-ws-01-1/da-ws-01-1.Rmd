@@ -1,0 +1,53 @@
+---
+title: "da-ws-01-1"
+author: Jannis Gottwald, Lukas Ditzel, Michaela Vorndran, Maite Lezama Valdez, Alexander Jorns
+date: "20 Oktober 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Learning log assignments
+
+Favorite aspects: learn how to use R Markdown
+
+Superfluous aspects: none, since not all of us have used R before
+
+Eureka effect: that´s how a repository works!!
+
+Links to what I've learned so far: no news about r-programming
+
+```{r}
+##Assign the value of 2 to a variable called a and the value of 5 to a variable called b
+a<-2
+b<-5
+##Compute the sum, difference, product, ratio of a and b
+r1<-a+b
+r2<-a-b
+r3<-a*b
+r4<-a/b
+##Create a vector v1 with variables from step 2
+v1<-(c(r1,r2,r3,r4))
+##Add a fifth entry to vector v1 
+r5<-a**b
+v1[5]<-r5
+#or
+v1<-(c(r1,r2,r3,r4))
+v1[5]<-a**b
+#or
+v1<-(c(r1,r2,r3,r4))
+v1<-append(v1, r5,5)
+##Create a second vector v2 with information on operation type
+v2<-c("sum","difference", "product", "ratio", "power")
+##Show the content of vector v2 
+print(v2)
+##combine the two vectors v1 and v2 into a data frame and Name the columns
+df<-data.frame(Results=v1, Operation=v2)
+##show entire content
+df
+##show content of 3 row and 1 column
+df[3,1]
+
+```
