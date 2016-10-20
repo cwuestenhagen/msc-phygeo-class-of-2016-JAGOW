@@ -28,6 +28,9 @@ r1<-a+b
 r2<-a-b
 r3<-a*b
 r4<-a/b
+#or for sum and product (bigger data)
+r1 <-sum(a,b)
+r3 <- prod(a,b)
 ##create a vector v1 which contains the values stored within the four variables from step 2
 v1<-(c(r1,r2,r3,r4))
 ##Add a fifth entry to vector v1 
@@ -40,6 +43,10 @@ v1[5]<-a**b
 #or
 v1<-(c(r1,r2,r3,r4))
 v1<-append(v1, r5,5)
+##print v1
+v1
+#or
+print(v1)
 ##Create a second vector v2 with information on operation type
 v2<-c("sum","difference", "product", "ratio", "power")
 ##Show v2 

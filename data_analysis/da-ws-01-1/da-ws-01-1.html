@@ -137,6 +137,9 @@ r1&lt;-a+b
 r2&lt;-a-b
 r3&lt;-a*b
 r4&lt;-a/b
+#or for sum and product (bigger data)
+r1 &lt;-sum(a,b)
+r3 &lt;- prod(a,b)
 ##create a vector v1 which contains the values stored within the four variables from step 2
 v1&lt;-(c(r1,r2,r3,r4))
 ##Add a fifth entry to vector v1 
@@ -149,7 +152,13 @@ v1[5]&lt;-a**b
 #or
 v1&lt;-(c(r1,r2,r3,r4))
 v1&lt;-append(v1, r5,5)
-##Create a second vector v2 with information on operation type
+##print v1
+v1</code></pre>
+<pre><code>## [1]  7.0 -3.0 10.0  0.4 32.0</code></pre>
+<pre class="r"><code>#or
+print(v1)</code></pre>
+<pre><code>## [1]  7.0 -3.0 10.0  0.4 32.0</code></pre>
+<pre class="r"><code>##Create a second vector v2 with information on operation type
 v2&lt;-c(&quot;sum&quot;,&quot;difference&quot;, &quot;product&quot;, &quot;ratio&quot;, &quot;power&quot;)
 ##Show v2 
 print(v2)</code></pre>
