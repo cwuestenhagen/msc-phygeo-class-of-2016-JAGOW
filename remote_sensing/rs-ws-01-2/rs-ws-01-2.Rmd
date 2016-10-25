@@ -1,0 +1,29 @@
+---
+title: "rs-ws-01-2"
+author: Jannis Gottwald, Maite Lezama Valdes, Lukas  Ditzel, Alexander Jorns, Michaela
+  Vorndran
+date: "25 Oktober 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+
+The average distance between the lidar-points is about 0.24m. To avoid NA-values we chose a 1m resolution for both operations.
+
+
+###Returns (Point Counts)
+
+![Returns (Point Counts)](returns_point_counts.png)
+
+
+###Intensity Range
+
+![Intensity Range](intensity_range.png)
+
+
+

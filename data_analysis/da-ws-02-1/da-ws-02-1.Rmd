@@ -1,0 +1,137 @@
+---
+title: "da-ws-02-1"
+author: Jannis Gottwald, Lukas Ditzel, Michaela Vorndran, Maite Lezama Valdez, Alexander
+  Jorns,
+date: "25 Oktober 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Loop and conquer
+
+
+```{r}
+
+##1: Larger, Equal or smaller
+a<-0
+if (a>1){
+  print("Larger")}else{print("Equal or smaller")}
+
+a<-2
+if (a>1){
+  print("Larger")
+}else{print("Equal or smaller")}
+
+
+## 2:Larger, Equal, Smaller
+a<-0
+if (a>1){print("Larger")}else if (a<1){print("smaller")}else if (a==1){print("Equal")}
+
+a<-1
+if (a>1){print("Larger")}else if (a<1){print("smaller")}else if (a==1){print("Equal")}
+
+a<-2
+if (a>1){print("Larger")}else if (a<1){print("smaller")}else if (a==1){print("Equal")}
+
+##3: Odd or Even
+a<-3
+  if (a%%2!=0){print("Odd")} else {print("Even")}
+a<-2
+if (a%%2!=0){print("Odd")} else {print("Even")}
+
+
+#or (just because it's much nicer)
+v1<- c(1:20)
+v2<- NULL
+for (i in seq(v1)){
+  if (v1[i]%%2!=0){v2[i]<-"Odd"} 
+  else {v2[i]<-"Even"}
+}
+v2
+
+
+##4: if-Then-else to for-loop
+
+for (i in c(0,1,2)){
+  if(i<1)
+  {print("smaller")}
+  else if(i>1)
+  {print("larger")}
+  else if (i==1)
+  {print("equal")}}
+
+
+
+
+##5: save results in vector
+v3<-NULL
+for (i in c(0,1,2)){
+  if(i<1)
+  {v3[i+1]<-"smaller"}
+  else if(i>1)
+  {v3[i+1]<-"larger"}
+else if (i==1)
+{v3[i+1]<-"equal"}}
+v3
+
+#or
+v4<-c(0,1,2)
+v5<-NULL
+for (i in seq(v4)){
+  if (v4[i]>1)
+  {v5[i]<-"larger"}
+  else if (v4[i]==1)
+  {v5[i]<-"equal"}
+  else if (v4[i]<1)
+  {v5[i]<-"smaller"}
+}
+v5
+
+
+
+## 6: Liste 1
+
+v6<-c(0,1,2)
+L1<-list()
+for (i in seq(v6)){
+  if (v6[i]>1)
+  {L1[i]<-"larger"}
+  else if (v6[i]==1)
+  {L1[i]<-"equal"}
+  else if (v6[i]<1)
+  {L1[i]<-"smaller"}
+}
+L1
+
+##7: Liste2
+v6<-c(0,1,2)
+
+L2<-lapply(seq(v6), function (i){
+ if (v6[i]>1)
+  {("larger")}
+  else if (v6[i]==1)
+  {("equal")}
+  else if (v6[i]<1)
+  {("smaller")}
+})
+
+print(L2)
+
+###8: unlist
+
+L2<-lapply(seq(v6), function (i){
+  if (v6[i]>1)
+  {("larger")}
+  else if (v6[i]==1)
+  {("equal")}
+  else if (v6[i]<1)
+  {("smaller")}
+})
+unlist(L2)
+
+
+
+```
