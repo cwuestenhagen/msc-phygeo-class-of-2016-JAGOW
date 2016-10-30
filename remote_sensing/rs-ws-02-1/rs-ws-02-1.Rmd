@@ -1,0 +1,117 @@
+---
+title: "rs-ws-02-1"
+author: Jannis Gottwald, Lukas Ditzel, Michaela Vorndran, Maite Lezama Valdez, Alexander
+  Jorns,
+date: "28 Oktober 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Crop and drop
+
+
+
+```{r eval=FALSE}
+library(raster)
+setwd("C:/Users/Jannis/Documents/GitHub/")
+
+
+###read all tiff's in directory into list
+
+read<-list.files("msc_phygeo_class_of_2016/remote_sensing_2016/data/raster/474000_5630000/", recursive=TRUE, pattern=glob2rx("*.tif"), full.names=TRUE)
+
+###convert to raster
+
+air_stck_lst<-lapply (read, function(i){stack(i)})
+
+projection(air_stck_lst[[1]])
+
+####find NA's in stacks
+
+stck_1<-air_stck_lst[[1]]
+plot(stck_1)
+
+stck_2<-air_stck_lst[[2]]
+plot(stck_2)
+
+stck_3<-air_stck_lst[[3]]
+plot(stck_3)###NA values in eastern part 
+
+###crop to extent without NA's
+
+ext_3<-extent(476000, 476450,5630000, 5632000)
+
+stck_3_c<-raster::crop(stck_3,ext_3, snap = "out")
+plot(stck_3_c)
+
+stck_4<-air_stck_lst[[4]]
+plot(stck_4)###NA values in west
+
+###crop to extent without NA's
+
+ext_4<-extent(476450, 478000, 5630000, 5632000)
+
+stck_4_c<-raster::crop(stck_4,ext_4, snap = "out")
+plot(stck_4_c)
+
+
+stck_5<-air_stck_lst[[5]]
+plot(stck_5)###NA value west
+
+###crop to extent without NA's
+
+ext_5<-extent(476467.6, 478000, 5632000, 5634000)
+
+stck_5_c<-raster::crop(stck_5,ext_5, snap = "out")
+plot(stck_5_c)
+
+stck_6<-air_stck_lst[[6]]
+plot(stck_6)
+
+stck_7<-air_stck_lst[[7]]
+plot(stck_7)
+
+
+###merge stacks
+
+air_mc<-merge(stck_1, stck_2, stck_3_c, stck_4_c, stck_5_c, stck_6, stck_7, fun=mean)
+plot(air_mc)
+
+
+###save .rds
+
+save(air_mc, file = "msc_phygeo_class_of_2016/remote_sensing_2016/data/raster/air_mc.rds")
+
+###clean global environment
+
+rm(stck_1, stck_2, stck_3, stck_3_c, stck_4,
+   stck_4_c,stck_5, stck_5_c, stck_6, stck_7, air_stck_lst)
+
+###get template for cropping
+
+ext<-raster("msc_phygeo_class_of_2016/remote_sensing_2016/data/raster/ext.tif")
+
+projection(ext)
+
+crs(ext)<-"+proj=utm +zone=32 +ellps=GRS80 +units=m +no_defs"
+
+###crop to lidar data
+
+air_crop<-raster::crop(air_mc,ext , snap = "out")
+
+plot(air_crop)
+
+
+###save raster stack
+
+save(air_crop, file = "msc_phygeo_class_of_2016/remote_sensing_2016/data/raster/air_crop.rds")
+
+writeRaster(air_crop, filename="air_crop.tif", options="INTERLEAVE=BAND", overwrite=TRUE)
+
+
+
+```
+
