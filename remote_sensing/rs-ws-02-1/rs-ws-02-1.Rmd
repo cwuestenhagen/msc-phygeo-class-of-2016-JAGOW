@@ -114,4 +114,4 @@ writeRaster(air_crop, filename="air_crop.tif", options="INTERLEAVE=BAND", overwr
 
 
 ```
-
+![](merged.jpg)
