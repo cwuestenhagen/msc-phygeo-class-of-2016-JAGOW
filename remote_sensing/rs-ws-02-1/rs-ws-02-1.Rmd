@@ -10,7 +10,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## Crop and drop
+## Crop
 
 
 
@@ -29,66 +29,72 @@ air_stck_lst<-lapply (read, function(i){stack(i)})
 
 projection(air_stck_lst[[1]])
 
-####find NA's in stacks
+###read lidar raster optain extent
+ext<-raster("msc_phygeo_class_of_2016/remote_sensing_2016/data/raster/ext.tif")
 
-stck_1<-air_stck_lst[[1]]
-plot(stck_1)
+projection(ext)
 
-stck_2<-air_stck_lst[[2]]
-plot(stck_2)
+crs(ext)<-"+proj=utm +zone=32 +ellps=GRS80 +units=m +no_defs"
 
-stck_3<-air_stck_lst[[3]]
-plot(stck_3)###NA values in eastern part 
+###optain extent
+extent(ext)
 
-###crop to extent without NA's
+###crop two eastern layers by using the xmax value of extent object
 
-ext_3<-extent(476000, 476450,5630000, 5632000)
+ext_1<-crop(air_stck_lst[[6]],
+            extent(air_stck_lst[[6]]@extent@xmin, 
+                   ext@extent@xmax, 
+                   air_stck_lst[[6]]@extent@ymin, 
+                   air_stck_lst[[6]]@extent@ymax
+            ))
 
-stck_3_c<-raster::crop(stck_3,ext_3, snap = "out")
-plot(stck_3_c)
+ext_2<-crop(air_stck_lst[[7]], 
+            extent(air_stck_lst[[7]]@extent@xmin, 
+                   ext@extent@xmax, 
+                   air_stck_lst[[7]]@extent@ymin, 
+                   air_stck_lst[[7]]@extent@ymax
+            ))
 
-stck_4<-air_stck_lst[[4]]
-plot(stck_4)###NA values in west
+##write results to new directory
 
-###crop to extent without NA's
+writeRaster(ext_1, filename="C:/Users/Jannis/Documents/GitHub/msc_phygeo_class_of_2016/remote_sensing_2016/data/raster/aerial_cropped/478_5632.tif", bylayers=TRUE)
 
-ext_4<-extent(476450, 478000, 5630000, 5632000)
-
-stck_4_c<-raster::crop(stck_4,ext_4, snap = "out")
-plot(stck_4_c)
-
-
-stck_5<-air_stck_lst[[5]]
-plot(stck_5)###NA value west
-
-###crop to extent without NA's
-
-ext_5<-extent(476467.6, 478000, 5632000, 5634000)
-
-stck_5_c<-raster::crop(stck_5,ext_5, snap = "out")
-plot(stck_5_c)
-
-stck_6<-air_stck_lst[[6]]
-plot(stck_6)
-
-stck_7<-air_stck_lst[[7]]
-plot(stck_7)
+writeRaster(ext_2, filename="C:/Users/Jannis/Documents/GitHub/msc_phygeo_class_of_2016/remote_sensing_2016/data/raster/aerial_cropped/478_5634.tif", bylayers=TRUE)
 
 
-###merge stacks
-
-air_mc<-merge(stck_1, stck_2, stck_3_c, stck_4_c, stck_5_c, stck_6, stck_7, fun=mean)
-plot(air_mc)
 
 
-###save .rds
+```
+![](cropped.jpg)
 
-save(air_mc, file = "msc_phygeo_class_of_2016/remote_sensing_2016/data/raster/air_mc.rds")
 
-###clean global environment
+##Merge
 
-rm(stck_1, stck_2, stck_3, stck_3_c, stck_4,
-   stck_4_c,stck_5, stck_5_c, stck_6, stck_7, air_stck_lst)
+
+How are we going to close the gap?
+
+```{r eval=FALSE}
+
+####change  NA's in stacks
+
+stack_na<-lapply(seq(air_stck_lst), function(i){
+  air_stck_lst[[i]][air_stck_lst[[i]]==255]<-0
+  return(air_stck_lst[[i]])
+}
+)
+
+
+##mosaic stacks
+merged<-mosaic(stack_na[[1]], stack_na[[2]], 
+               stack_na[[3]], stack_na[[4]], 
+               stack_na[[5]], stack_na[[6]], 
+               stack_na[[7]],fun=max)
+
+
+###save .rds 
+
+save(merged, file = "msc_phygeo_class_of_2016/remote_sensing_2016/data/raster/air_mc.rds")
+
 
 ###get template for cropping
 
@@ -100,18 +106,13 @@ crs(ext)<-"+proj=utm +zone=32 +ellps=GRS80 +units=m +no_defs"
 
 ###crop to lidar data
 
-air_crop<-raster::crop(air_mc,ext , snap = "out")
-
-plot(air_crop)
+merge_crop<-raster::crop(merged,ext, snap = "out")
 
 
 ###save raster stack
 
-save(air_crop, file = "msc_phygeo_class_of_2016/remote_sensing_2016/data/raster/air_crop.rds")
+save(merge_crop, file = "msc_phygeo_class_of_2016/remote_sensing_2016/data/raster/erial_cropped/air_crop.rds")
 
-writeRaster(air_crop, filename="air_crop.tif", options="INTERLEAVE=BAND", overwrite=TRUE)
-
-
-
-```
-![](merged.jpg)
+writeRaster(merged, filename="msc_phygeo_class_of_2016/remote_sensing_2016/data/raster/erial_cropped/air_crop.tif",  overwrite=TRUE)
+````
+![](merged_cropped.jpg)
