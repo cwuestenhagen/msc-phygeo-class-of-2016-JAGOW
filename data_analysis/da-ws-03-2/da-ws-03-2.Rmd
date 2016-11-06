@@ -1,0 +1,61 @@
+---
+title: "da-ws-03-2"
+author: Jannis Gottwald, Lukas Ditzel, Michaela Vorndran, Maite Lezama Valdez, Alexander
+  Jorns,
+date: "06 November 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+Favorite: Using the “par” function to create plots in a 2*2 grid.
+Eureka: Adjusting the x-axis with “tck” didnt work well, using the “axis” function to define the whole x-axis seemed to be the easy way.
+```{r }
+setwd("C:/Users/Jannis/Documents/GitHub/msc-phygeo-class-of-2016-JAGOW/data_analysis/da-ws-03-2")
+wh <- read.csv(file = "hessen_holzeinschlag_1997-2014.csv", skip=4, header=T, sep = ";")
+wh <- wh[-19,]
+wh
+class(wh)
+summary(wh)
+write.table(wh,"holzeinschlag.csv", dec=".", sep=",")
+
+attach(wh)
+box<-boxplot(wh, xlab="Species", 
+             ylab="Logging per year in Tsd.", main= "Logging Overview", names = colnames(wh), 
+             col = (c("green", "green","darkgreen", "darkgreen", "green", "red")))
+
+## Assignment 2
+summary(Fichte)
+
+#Spruce: We can see that the spruce is the most logged species and that the range of the loggings is realtively high,
+#furthermore there is a outlier at 6524 logged tree in the year 2007, which shows a massive logging on spruce.
+
+#Beech: we can see that the beech is the second most logged tree with a high median, but with a realativly low range and with no outliers.
+summary(Buche)
+
+#Assignment 3
+
+be<- cbind(Buche,Eiche)
+bf<- cbind(Buche, Fichte)
+bk <-cbind(Buche, Kiefer)
+bb <-cbind(Buche, Buntholz)
+par(mfrow=c(2,2), xpd=NA)
+
+df3<- df(be,bf,bk,bb)
+l<- list(be,bf,bk,bb)
+par(mfrow=c(2,2), xpd=NA)
+for (i in l) {matplot (FWJ, i, type ="o", pch=1, main= "logging beech/colored wood",ylab = "logging in tsd.",xaxt="n")
+  axis(1, at=c(1997:2014))}
+legend("topleft", inset=c(-.5,-1.2), legend = c("Beech","Other Species"), horiz=F, col=1:2, pch=1, title= "Legend", lty = c(1,2))
+
+
+
+#Assignment 4
+###beech/oak: we see that the logging is much higher for beech, than for oak, the oak logging is quite low and linear.
+###beech/spruce: spruce is the only species whose logging is in one year lower than the beech logging, furthermore, the spruce is the most logged tree.
+###beech/pine: we see that the pine is logged less in the same year in which the logging for beech is relativly low.
+###beech/colored wood: colored wood is the less loddged wood, this is because colored wood is listed as beech since the year 2000, the values for colored wood for the later years are 0.
