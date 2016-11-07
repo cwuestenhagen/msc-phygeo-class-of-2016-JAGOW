@@ -10,11 +10,11 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 ###Feedback
-Favorite aspect of the session: very entertaining and inspiring session. Think before moving.
+Favorite aspect of the session: very entertaining and inspiring session. 
 
 ## Deconstruction work
 
-The fact that geographers have been racking their brains for decades to adequately distinguish the diversity of landforms already suggests that this is not a trivial task. To translate these descriptions into the language of a machine and further into the language of raster cells does not seem easy neither. Broken down to the most superficial level, the value of a raster cell can be related to the surrounding cells in three different ways- more, equal ore less. Two different objects of the same type of geomorphological structure should express similar patterns in the relations of the raster cells and therefore could be recognized by an algorithm.
+The fact that geographers have been racking their brains for decades to adequately distinguish the diversity of landforms, already suggests that this is not a trivial task. To translate these descriptions into the language of a machine and further into the language of raster cells does not seem easy neither. Broken down to the most superficial level, the value of a raster cell can be related to the surrounding cells in three different ways- more, equal ore less. Two different objects of the same type of geomorphological structure should express similar patterns in the relations of the raster cells and therefore, could be recognized by an algorithm.
 For example:
 ```{r }
 peak<-matrix(c(-1,-1,-1,-1,0,-1,-1,-1,-1), nrow=3, ncol=3, byrow=TRUE)
@@ -42,7 +42,7 @@ But to try to capture the diversity of landforms in such a simplified way would 
 ###What we did
 
 So it is more than a pattern and there is also something like the scale that matters.
-That is why it still needs a human to define the conditions when an entity is part of a landform category.
+That is why it still needs a human to define the conditions, when an entity is part of a landform category.
 
 We involved both, the recognition of a pattern such as the expression of conditions in the development of our algorithm. A cell belongs to the category "plain" if the variance of the surrounding raster cells is below a certain threshhold, multiple cells form the entity "plain" if the total area of connected cells is above a certain threshhold and finaly, the distinction of the categories "plateau" and plain depends on the height of the entity. All threshholds are relativ to the value distribution of the investigated subsection of the world. 
 
