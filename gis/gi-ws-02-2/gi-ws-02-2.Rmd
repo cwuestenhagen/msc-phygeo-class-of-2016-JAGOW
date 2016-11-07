@@ -9,6 +9,8 @@ output: html_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
+###Feedback
+Favorite aspect of the session: very entertaining and inspiring session. Think before moving.
 
 ## Deconstruction work
 
@@ -91,3 +93,16 @@ for (i in seq(c(r, r_area))){if(r[i]<quantile(r, 0.5) & r_area[i]>quantile(r_are
   }
 
 ```
+####Result 1: Median of mean elevation splits plains and plateaus
+![](50_nodem.jpg)
+
+
+
+####Result 1: Median of mean elevation splits plains and plateaus with DEM
+![](50.jpg)
+
+####Result 2: Highest and lowest 25% of mean elevation splits plains and plateaus
+![](25_nodem.jpg)
+
+####Result 2: Highest and lowest 25% of mean elevation splits plains and plateaus with DEM
+![](25.jpg)
