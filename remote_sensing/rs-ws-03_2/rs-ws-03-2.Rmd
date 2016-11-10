@@ -1,0 +1,163 @@
+---
+title: "rs-ws-03-2"
+author: Jannis Gottwald, Lukas Ditzel, Michaela Vorndran, Maite Lezama Valdez, Alexander
+  Jorns,
+date: "09 November 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+Strategy
+- neighbouring raster cells are most likely part of the same landuse category
+- neighbouring tiles should share landuse categories at theire neighbouring edges
+- the results of mathematical operations like divisions should be close to one if the data sets are    similar, so does the mean of the above operations
+- we devided neighbouring rows ore columns (depending on where the tiles where connected) and took the mean of these devisions
+- The results show that the values of the raster cells of two neighbouring tiles are very similar if they where taken from the same landuse category
+-no further processing is needed
+
+
+
+```{r, eval=FALSE}
+library(raster)
+install.packages("tools")
+library(tools)
+
+
+path_main<-("C:/Users/Jannis/Documents/GitHub/msc_phygeo_class_of_2016/remote_sensing_2016")
+path_c<-paste0(path_main, "/data/raster/cross_check/")
+path_results<-paste0(path_main, "/results/rs-ws-03-2/")
+
+
+read<-list.files( recursive=TRUE, pattern=glob2rx("*.tif"), full.names=TRUE)
+
+ngb_aerials <- function(aerial_files, step = 2000){
+  
+  ngb_files <- lapply(basename(aerial_files), function(act_file){
+    
+    # Get names without path to compare names although path might be different
+    act_ext <- file_ext(act_file)
+    fnames <- basename(aerial_files)
+    
+    # Get x and y coordinates of actual file from filename
+    act_file_x <- as.numeric(substr(act_file, 1, 6))
+    act_file_y <- as.numeric(substr(act_file, 8, 14))
+    
+    # Set neighbours starting from north with clockwise rotation (N, E, S, W)
+    pot_ngb <- c(paste0(act_file_x, "_", act_file_y + step, ".", act_ext),
+                 paste0(act_file_x + step, "_", act_file_y, ".", act_ext),
+                 paste0(act_file_x, "_", act_file_y - step, ".", act_ext),
+                 paste0(act_file_x - step, "_", act_file_y, ".", act_ext))
+    
+    # Check if neighburs exist and create vector with full filepath
+    act_ngb <- sapply(pot_ngb, function(f){
+      pos <- grep(f, fnames)
+      if(length(pos) > 0){
+        return(aerial_files[pos])
+      } else {
+        return(NA)
+      }
+    })
+    return(act_ngb)
+  })
+  
+  names(ngb_files) <- aerial_files
+  return(ngb_files)
+  
+}
+
+neighb<-ngb_aerials(read)
+y<-NULL
+z<-NULL
+
+for (i in seq(neighb)){if(!is.na(neighb[[i]][[1]]))
+{
+  x <-stack(names(neighb[i]))
+  
+  n<-stack(basename(neighb[[i]][1]))
+  
+  y<-mean((x[1,])/(n[nrow(n),]))
+  
+  z<-c(z,y)
+  
+}}
+
+for (i in seq(neighb)){if(!is.na(neighb[[i]][[2]]))
+  
+{
+  x <-stack(names(neighb[i]))
+  
+  e<-stack(basename(neighb[[i]][2]))
+  
+  y<-mean((x[,ncol(x)])/(e[,1])) 
+  
+  z<-c(z,y)
+  
+}}
+
+for (i in seq(neighb))
+{
+  if(!is.na(neighb[[i]][[3]]))
+  { 
+    x <-stack(names(neighb[i]))
+    
+    s<-stack(basename(neighb[[i]][3]))
+             
+             y<-mean((x[nrow(x),])/(s[1,]))
+             
+             z<-c(z,y)
+  }}
+
+for (i in seq(neighb))
+{
+  if (!is.na(neighb[[i]][[4]])) 
+  {
+    x <-stack(names(neighb[i]))
+    
+    w<-stack(basename(neighb[[i]][4]))
+    
+    y<-mean((x[,1])/(w[,ncol(w)])) 
+            
+            z<-c(z,y) }}
+
+
+saveRDS(z, file=paste0(path_results,"rdata/rs-ws-03-2.rds"))
+
+
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r }
+# Executable section
+# Set path ---------------------------------------------------------------------
+path_main<-("C:/Users/Jannis/Documents/GitHub/msc_phygeo_class_of_2016/remote_sensing_2016")
+path_c<-paste0(path_main, "/data/raster/cross_check/")
+path_results<-paste0(path_main, "/results/rs-ws-03-2/")
+if(Sys.info()["sysname"] == "Windows"){
+  filepath_base <- path_main
+} else {
+  filepath_base <- "/media/permanent/active/moc/msc-phygeo-remote-sensing-2016/"
+}
+
+path_data <- paste0(filepath_base, "data/")
+path_rdata <- paste0(path_results, "rdata/")
+
+# Load intermediate results which form the basis for the descriptive analysis --
+results <- readRDS(file = paste0(path_results, "rdata/rs-ws-03-2.rds"))
+
+
+# Perform final descriptive analysis -------------------------------------------
+# ...
+
+boxplot(results)
+```
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
