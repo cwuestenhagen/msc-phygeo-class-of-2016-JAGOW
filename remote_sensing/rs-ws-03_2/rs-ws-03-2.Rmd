@@ -138,16 +138,15 @@ You can also embed plots, for example:
 # Executable section
 # Set path ---------------------------------------------------------------------
 path_main<-("C:/Users/Jannis/Documents/GitHub/msc_phygeo_class_of_2016/remote_sensing_2016")
-path_c<-paste0(path_main, "/data/raster/cross_check/")
+
 path_results<-paste0(path_main, "/results/rs-ws-03-2/")
+
 if(Sys.info()["sysname"] == "Windows"){
   filepath_base <- path_main
 } else {
   filepath_base <- "/media/permanent/active/moc/msc-phygeo-remote-sensing-2016/"
 }
 
-path_data <- paste0(filepath_base, "data/")
-path_rdata <- paste0(path_results, "rdata/")
 
 # Load intermediate results which form the basis for the descriptive analysis --
 results <- readRDS(file = paste0(path_results, "rdata/rs-ws-03-2.rds"))

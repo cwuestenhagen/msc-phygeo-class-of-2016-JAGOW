@@ -237,16 +237,15 @@ saveRDS(z, file=paste0(path_results,&quot;rdata/rs-ws-03-2.rds&quot;))</code></p
 <pre class="r"><code># Executable section
 # Set path ---------------------------------------------------------------------
 path_main&lt;-(&quot;C:/Users/Jannis/Documents/GitHub/msc_phygeo_class_of_2016/remote_sensing_2016&quot;)
-path_c&lt;-paste0(path_main, &quot;/data/raster/cross_check/&quot;)
+
 path_results&lt;-paste0(path_main, &quot;/results/rs-ws-03-2/&quot;)
+
 if(Sys.info()[&quot;sysname&quot;] == &quot;Windows&quot;){
   filepath_base &lt;- path_main
 } else {
   filepath_base &lt;- &quot;/media/permanent/active/moc/msc-phygeo-remote-sensing-2016/&quot;
 }
 
-path_data &lt;- paste0(filepath_base, &quot;data/&quot;)
-path_rdata &lt;- paste0(path_results, &quot;rdata/&quot;)
 
 # Load intermediate results which form the basis for the descriptive analysis --
 results &lt;- readRDS(file = paste0(path_results, &quot;rdata/rs-ws-03-2.rds&quot;))
