@@ -1,0 +1,130 @@
+---
+title: "da-ws-04-2"
+author: Jannis Gottwald, Lukas Ditzel, Michaela Vorndran, Maite Lezama Valdez, Alexander
+  Jorns,
+date: "14 November 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Skript
+
+```{r}
+path_main <-"C:/Users/Jannis/Documents/GitHub/msc_phygeo_class_of_2016/data_analysis_2016/"
+path_data <-paste0(path_main, "data/")
+path_ha <-"C:/Users/Jannis/Documents/GitHub/msc-phygeo-class-of-2016-JAGOW/data_analysis/da-ws-04-2" 
+path_rdata <-paste0(path_main, "/rdata/")
+source("C:/Users/Jannis/Documents/GitHub/msc_phygeo_class_of_2016/data_analysis_2016/rdata/function_04_2.R")        
+
+#Tabelle Fl?chennutzung
+fn<- read.table(paste0(path_data, "AI001_gebiet_flaeche.txt"), sep = ";", skip = 4, header=T, fill=T)
+head(fn)
+str(fn)
+
+# Ende der Liste einsehen. Keine Korrektur notwendig.
+tail(fn, 10)
+
+#Rename
+names(fn)<- c("Year", "ID", "Place", "share_settlement_transport_infrastructure_in_total_areas", "share_recreational_in_total_areas", "share_agric_in_total_areas", "share_forests_in_total_areas")
+head(fn)
+
+#Convert Data
+for(x in colnames(fn)[4:7]){
+  fn[, x][fn[, x] == "."] <- NA  
+  fn[, x] <- as.numeric(sub(",", ".", as.character(fn[, x])))
+}
+
+str(fn)
+
+#Function
+fn_final <- split_location(fn)
+```
+
+## Function
+
+
+```{r}
+split_location <- function(fn){
+
+
+# Mehrere Orte in einer Spalte voneinander trennen
+place <- strsplit(as.character(fn$Place), ",")
+print(head(place))
+print(max(sapply(place, length)))
+
+
+#If the second or third column is not filled by an information part, NA is stored 
+#in the respective cells instead. Let's do it (the gsub function is used to delete leading white spaces):
+place_df <- lapply(place, function(i){
+  p1 <- sub("^//s+", "", i[1])  # Trim leading white spaces
+  if(length(i) > 2){
+    p2 <- sub("^//s+", "", i[2])
+    p3 <- sub("^//s+", "", i[3])
+  } else if (length(i) > 1){
+    p2 <- sub("^//s+", "", i[2])
+    p3 <- NA
+  } else {
+    p2 <- NA
+    p3 <- NA
+  }
+  data.frame(A = p1,
+             B = p2,
+             C= p3)
+})
+
+#liste zu df
+place_df <- do.call("rbind", place_df)
+place_df$ID <- fn$ID 
+place_df$Year <- fn$Year
+head(place_df)
+
+#unique returns a vector, data frame or array like x but with duplicate elements/rows removed.
+#infos column B
+unique(place_df[, 2])
+# Infos column C
+unique(place_df[, 3])
+# Comparison
+unique(place_df$B[!is.na(place_df$C)])
+# Change Sequence 
+place_df[!is.na(place_df$C),] <- place_df[!is.na(place_df$C), c(1,3,2, 4, 5)]
+head(place_df)
+
+
+unique(fn$Place[is.na(place_df$B)])
+sum(is.na(place_df$B))
+
+
+for(r in seq(nrow(place_df))){
+  if(is.na(place_df$B[r]) &
+     grepl("kreis", tolower(place_df$A[r]))){#tolower = auch gro?geschriebene Kreis
+    place_df$B[r] <- "Landkreis"
+  }
+}
+unique(fn$Place[is.na(place_df$B)])
+sum(is.na(place_df$B))
+
+
+place_df$B[is.na(place_df$B) & nchar(as.character(place_df$ID) == 2)] <- "Bundesland"
+place_df$B[place_df$ID == "DG"] <- "Land"
+print(head(place_df))
+sum(is.na(place_df$B))
+
+#Change Column Names
+names(place_df) <- c("Place", "Admin_unit", "Admin_misc", "ID", "Year")
+head(place_df) 
+
+#Merging both data frames
+fn$Place <- NULL
+fn_final <- merge(fn, place_df, by = c("ID", "Year"))
+names(fn_final)
+fn_final<- fn_final[,c(1, 2, 7, 8, 9, 3, 4, 5, 6)]
+names(fn_final)
+print(head(fn_final))
+
+return(fn_final)
+}
+```
+
