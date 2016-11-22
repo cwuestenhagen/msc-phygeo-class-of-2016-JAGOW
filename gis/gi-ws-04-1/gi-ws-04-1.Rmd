@@ -176,6 +176,6 @@ writeRaster(fuzz_rc, paste0(gisres, "plains_plateaus.tif"), bylayer=TRUE, overwr
 ![](plateaus.JPG)
 
 
-#White: Plain
+#Red: Plain
 #Yellow: Plateau
 #Green: Rest
