@@ -1,0 +1,83 @@
+---
+title: "da-ws-06-2"
+author: "Jannis Gottwald, Lukas Ditzel, Michaela Vorndran, Maite Lezama Valdes, Alexander Jorns"
+date: "27 November 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = T)
+```
+
+## W06-2: Wheat vs. barley revisited
+
+####task: 
+assess prediction performance winter barley yield based on yield numbers 
+winter wheat by biv lin model. cross-validation: mean of the root mean 
+square error, its minimum, 25% 50% and 75% quantile and maximum value across 
+the cross-validation runs.
+
+```{r}
+#da-ws-06-2
+source("GitHub/data/data_analysis/data/rdata/path_da.R")
+
+#root mean sqare error implemented in function rmse() in this package:
+#install.packages("hydroGOF")
+library(hydroGOF)
+
+cp <- readRDS(paste0(path_da_rds,"feldfr_clean.rds"))
+
+#vector logical: na-values in rows?
+row.has.na <- apply(cp[,c(7,9)], 1, function(n){any(is.na(n))})
+sum(row.has.na)
+#test how many cases remain
+nrow(cp)-sum(row.has.na)
+x <- cp[!row.has.na,]
+
+lmt82 <- lapply(seq(100), function(n){
+  set.seed(n)
+  s1 <-sample(nrow(x), 0.8*nrow(x))
+  traindata <- x[s1,]
+  testdata <- x[-s1,]
+  mod <- lm(Winter_wheat~Winter_barley, data=traindata)
+  pred <- predict(mod, newdata = testdata)
+  obsv <- testdata$Winter_wheat
+  modrmse <- rmse(pred,obsv)
+  model_r_squared <- summary(mod)$r.squared
+  dflmt = data.frame(modrmse=modrmse, r_sq = model_r_squared,
+                     pred=pred, obsv=obsv)
+  dflmt
+})
+dflmt <- do.call("rbind", lmt82)
+#rownames(dflmt) <- c(1:100)
+head(dflmt)
+summary(dflmt[,1])
+boxplot(dflmt[,1])
+```
+
+####Prediction performance: The root mean sqare error (the error being the deviation 
+####between observed and predicted values) ranges in any repetition of the 100 random
+####samples between about 7.3 and 8 (depending on the sample selection) and is more or less normal distributed. 
+
+```{r}
+#assess distribution of dependent variable prediction
+summary(dflmt$pred)
+mean(dflmt$pred)
+sd(dflmt$pred)
+
+#assess distribution of dependent variable observation
+summary(dflmt$obsv)
+mean(dflmt$obsv)
+sd(dflmt$obsv)
+
+boxplot(dflmt$pred, dflmt$obsv, names=c("predicted", "observed"))
+```
+
+####The range of observed values in the dependent variable in this case is from 0 to 113.3, and 14.67
+####to 119.6 in this case of selection, its mean being 71.95 with a SD of 12.69 in case
+####of predicted values respectively 71.95 and 10.2. So the maximum error to be 
+####expected seems to be acceptable.
+####Although interquartil range in predicted values is smaller than in the actual
+####distribution, as can be seen in the boxplots, observed and predicted distributions
+####of winter wheat can be predicted nicely with help of winter barley.
+
