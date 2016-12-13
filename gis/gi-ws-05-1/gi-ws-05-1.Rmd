@@ -1,0 +1,105 @@
+---
+title: "gi-ws-05-1"
+author: Maite Lezama Valdes, Lukas Ditzel, Alexander Jorns, Jannis Gottwald, Michaela
+  Vorndran
+date: "13 Dezember 2016"
+output: html_document
+---
+## W05-1 Local drainage direction
+
+####settings
+```{r eval=F}
+source("C:/Users/mleza/Documents/msc-phygeo-ws-16/msc-phygeo-class-of-2016-MLezamaValdes/fun/paths.r")
+outpath <- paste0(path_data_gis, "output_test5/")
+dem <- paste0(path_gis_input_clean,"elevation.tif")
+x <-477755.4
+y <-5632178.4
+sagaCmd <- paste0(path_saga_norm, "saga_cmd.exe")
+```
+
+
+####interactive workflow (function for watershed with twi)
+```{r eval=F}
+twi_watershed <- function(outpath, dem, sagaCmd, x, y){
+  #convert dem to sgrd
+  gdalUtils::gdalwarp(dem, paste0(outpath,"dem.sdat"), 
+                      overwrite=TRUE,  of='SAGA')
+
+  #preparation: 
+  #fill sinks
+  system(paste0(sagaCmd, " ta_preprocessor 4",
+                " -ELEV=",outpath, "dem.sgrd",
+                " -FILLED=",outpath,"dem_filled.sgrd")
+  )
+  
+  #slope, aspect, curvature-tool (slope needed for calculation of TWI)
+  system(paste0(sagaCmd, " ta_morphometry 0",
+                " -ELEVATION=",outpath, "dem.sgrd",
+                " -SLOPE=",outpath,"slope.sgrd")
+  )
+  
+  #calculate flow accumulation (Top-Down)
+  system(paste0(sagaCmd, " ta_hydrology 0",
+                " -ELEVATION=",outpath, "dem_filled.sgrd",
+                " -FLOW=",outpath,"flow_acc_td.sgrd")
+  )
+  
+  #calculate TWI (goal of the process)
+  system(paste0(sagaCmd, " ta_hydrology 20",
+                " -SLOPE=",outpath, "slope.sgrd",
+                " -AREA=",outpath, "flow_acc_td.sgrd",
+                " -TWI=", outpath, "TWI.sgrd")
+  )
+  
+  #calculate watershed for the outlet at 477755.4E, 5632178.4N (scale of the process)
+  system(paste0(sagaCmd, " ta_hydrology 4",
+                " -TARGET_PT_X",x,
+                " -TARGET_PT_Y",y,
+                " -ELEVATION=",outpath, "dem_filled.sgrd",
+                " -AREA=",outpath, "upslope.sgrd")
+  )
+  
+  #reconverting .sgrd to .tif
+  gdalUtils::gdalwarp(paste0(outpath,"upslope.sdat"),
+                      paste0(outpath,"upslope.tif"), 
+                      overwrite=TRUE, of="GTiff") 
+  
+  gdalUtils::gdalwarp(paste0(outpath,"TWI.sdat"),
+                      paste0(outpath,"TWI.tif"), 
+                      overwrite=TRUE, of="GTiff") 
+  
+  #read upslope and twi-Rasters
+  upslope <- raster(paste0(outpath, "upslope.tif"))
+  twi <- raster(paste0(outpath, "TWI.tif"))
+  
+  #form grid with twi for catchment area
+  twi_upslope <- twi
+  twi_upslope[upslope==0] <- NA
+
+  writeRaster(twi_upslope,paste0(outpath,"twi_upslope.tif"))
+}
+
+twi_watershed(outpath, dem, sagaCmd, x, y)
+```
+####Topographic Wetness Index for the catchment area of the above defined coordinates
+![](output_saga.PNG)
+
+###Discussion of Algorithm: 
+Der Algorithmus der Funktion twi_watershed berechnet auf Basis des DEM das 
+Einzugsgebiet eines fiktiven Pegels, der sich auf der gegebenen Koordinate 
+befindet. Durch die Wahl der Koordinate fließen zwei flow-accumulation-Pfade im Pegel 
+zusammen (siehe Abb. Pegel): Der grüne Punkt markiert in etwa die 
+Ursprungsposition der Koordinate und die Spitze des Pfeils die der neu gewählten 
+(die beiden Koordinaten sind auch in der Abbildung Upslope Area zu sehen, 
+der westlichere Punkt ist die neu gewählte Koordinate).
+
+####Pegel
+![](Pegel.PNG)
+
+In der Upslope-Area sind die Zuflusswerte für den nordwestlichen Zufluss
+viel niedriger, sodass grafisch nur das Einzugsgebiet des östlichen Zuflusses 
+erscheint (siehe Abb. Upslope-Area), im Ergebnisbild jedoch auch das Einzugsgebiet der westlichen flow-accumulation. Man sollte den Pegel dort verorten, wo der Zufluss eindeutig 
+abgrenzbar ist. Beim TWI fällt auf, dass der Wasserfluss um baumartige Strukturen herumfließt. 
+
+####Upslope Area
+![](Upslope.PNG)
