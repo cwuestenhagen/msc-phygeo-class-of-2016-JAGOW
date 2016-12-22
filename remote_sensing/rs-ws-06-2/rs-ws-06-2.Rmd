@@ -295,5 +295,57 @@ models<-lapply(seq(k), function(i){
   
   })
 
-prediction<-predict(stack, best_model)
+pred<-raster::predict(stack, models[[1]]$model)
 ````
+
+##results
+
+```{r eval=FALSE}
+
+mat_kappa<-matrix(c(models[[1]]$Kappa,models[[2]]$Kappa, models[[3]]$Kappa, models[[4]]$Kappa, models[[5]]$Kappa, models[[6]]$Kappa), nrow=6, ncol=1, dimnames=list(c("model_1", "model_2", "model_3", "model_4", "model_5","model_6"), ("Kappa_test")))
+
+
+mat_kappa
+````
+![](Kappa.JPG)
+````{r eval=FALSE}
+
+models[[1]]$model$importance
+
+````
+![](imp1.JPG)
+```{r eval=FALSE}
+models[[2]]$model$importance
+````
+![](imp2.JPG)
+```{r eval=FALSE}
+models[[3]]$model$importance
+````
+![](imp3.JPG)
+```{r eval=FALSE}
+models[[4]]$model$importance
+```
+![](imp4.JPG)
+```{r eval=FALSE}
+models[[5]]$model$importance
+```
+![](imp5.JPG)
+````{r eval=FALSE}
+models[[6]]$model$importance
+````
+![](imp6.JPG)
+
+
+
+####Prediction plotted in arcGis before calculating single values
+
+![](pred_stretch_values.JPG)
+
+
+####Prediction plotted in arcGis with unique Color for single values
+
+![](predict_single_legend.JPG)
+
+###Interpretation
+
+Using the glcm texture-filters results in a abetter Kappa (0.6) than it was achieved by using the filters generated in the course (see lesson of today 22.12.16). The model seems to be stable in ranking the variable importance and in the kappa on testing data but the fact that all input variables have been used shows, that there are still input features missing to come to acceptable results.
