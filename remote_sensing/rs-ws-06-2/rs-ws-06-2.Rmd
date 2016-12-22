@@ -1,0 +1,299 @@
+---
+title: "rs-ws-06-2"
+author: Jannis Gottwald, Lukas Ditzel, Michaela Vorndran, Maite Lezama Valdez, Alexander
+  Jorns,
+date: "21 Dezember 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## W06-2: Accuracy assessment
+
+
+#####load necessary libraries and set path
+```{r eval=FALSE}
+
+#load necessary libraries
+library(rgdal)
+library(raster)
+library(maptools)
+library(randomForest)
+library(mapview)
+library(caret)
+#install.packages("ipred")
+library(ipred)
+#install.packages("gbm")
+library(gbm)
+#install.packages("mlbench")
+library(mlbench)
+# library(latticeExtra)
+# library(Rsenal)
+
+##set pathes
+path <- "GitHub/data/remote_sensing/data/"
+setwd(path)
+
+```
+
+## Kappa function
+
+
+
+```{r eval=FALSE}
+
+##compKappa 
+compKappa <- function(ctable){
+  ctable <- ctable/sum(ctable)
+  categories <- nrow(ctable)
+  
+  # Fraction of agreement
+  pagrm <- 0
+  for(i in seq(categories)){
+    pagrm <- pagrm + ctable[i,i]
+  }
+  
+  # Expected fraction of agreement subject to the observed distribution
+  pexpct <- 0
+  for(i in seq(categories)){
+    pexpct <- pexpct + sum(ctable[i,]) * sum(ctable[,i])
+  }
+  
+  # Kappa index
+  kappa <- (pagrm - pexpct)/(1 - pexpct)}
+
+
+
+```
+
+##indices glcm
+
+````{r eval=FALSE}
+
+
+##read tiles
+channels<-list.files("GitHub/data/remote_sensing/data/raster/mosaic/", recursive = TRUE, pattern = glob2rx("*.tif"), full.names=TRUE)
+
+chann_layer<- lapply(channels, function(i) {stack(i)})
+
+##mosaic tiles
+channels_full<-mosaic(chann_layer[[1]], chann_layer[[2]], 
+               chann_layer[[3]], chann_layer[[4]], 
+               chann_layer[[5]], chann_layer[[6]],fun=max)
+
+writeRaster(channels_full, "GitHub/data/remote_sensing/data/raster/mosaic/mosaic.tif")
+
+
+##resample tiles to 1m
+tmplt <- raster("raster/exp_var/geonode_muf_merged_001m.tif")
+
+stack<-channels_full
+
+stack_chan <- lapply(seq_along(stack)[1:6], function(i) {
+  print(i)
+  if (!identical(projection(stack[[i]]), projection(tmplt))) {
+    tst <- projectRaster(stack[[i]], tmplt)
+  } else 
+  {
+    tst <- resample(stack[[i]], tmplt, method = "ngb")    
+  }
+  return(tst)
+})
+
+##calculate texture variables
+textureVariables <- function(x,
+                             nrasters=1:nlayers(x),
+                             kernelSize=c(3),
+                             stats=c("mean", "variance", "homogeneity", "contrast", "dissimilarity", "entropy", 
+                                     "second_moment", "correlation"),
+                             shift=list(c(0,1), c(1,1), c(1,0),c(1,-1)),
+                             parallel=TRUE,
+                             n_grey = 8,
+                             min_x=NULL,
+                             max_x=NULL){
+  require(glcm) 
+  require(raster)
+  if (parallel){
+    require(doParallel)
+    registerDoParallel(detectCores()-1)
+  }
+  
+  
+  #set values larger than the max/min value to the max/minvalue. 
+  #Otherwise NA would be used
+  if(!is.null(min_x)){
+    if (length(nrasters)>1){
+      for (i in nrasters){
+        x[[i]]=reclassify(x[[i]], c(max_x[i],Inf,max_x[i]))
+        x[[i]]=reclassify(x[[i]], c(-Inf,min_x[i],min_x[i]))
+      }
+    } else { # only one raster
+      x=reclassify(x, c(max_x,Inf,max_x))
+      x=reclassify(x, c(-Inf,min_x,min_x)) 
+    }
+  }
+  
+  
+  glcm_filter<-list()
+  for (j in 1:length(kernelSize)){
+    if (class (x)=="RasterStack"||class (x)=="RasterBrick"){  
+      if (parallel){
+        glcm_filter[[j]]<-foreach(i=nrasters,
+                                  .packages= c("glcm","raster"))%dopar%{
+                                    glcm(x[[i]], 
+                                         window = c(kernelSize[j], kernelSize[j]), 
+                                         shift=shift,
+                                         statistics=stats,n_grey=n_grey,
+                                         min_x=min_x[i],max_x=max_x[i],
+                                         na_opt="center")
+                                  } 
+      } else {
+        glcm_filter[[j]]<-foreach(i=nrasters,
+                                  .packages= c("glcm","raster"))%do%{
+                                    mask(glcm(x[[i]], 
+                                              window = c(kernelSize[j], kernelSize[j]), 
+                                              shift=shift,
+                                              statistics=stats,n_grey=n_grey,
+                                              min_x=min_x[i],max_x=max_x[i],
+                                              na_opt="center"), x[[i]])
+                                  }
+      }
+      names(glcm_filter[[j]])<-names(x)[nrasters]
+    } else {
+      glcm_filter[[j]]<-mask(glcm(x, window = c(kernelSize[j], kernelSize[j]), 
+                                  shift=shift,
+                                  statistics=stats,n_grey=n_grey,
+                                  min_x=min_x,max_x=max_x,
+                                  na_opt="center"), x)
+    }   
+  }
+  names(glcm_filter)<-paste0("size_",kernelSize)
+  return(glcm_filter)
+}
+
+result <- textureVariables(channels_full,nrasters=1:3,
+                           stats=c("mean", "variance", "homogeneity", "contrast", "dissimilarity", "entropy", 
+                                   "second_moment", "correlation"))
+
+writeRaster(result$size_3$layer.1, "GitHub/data/remote_sensing/data/raster/indices/texture1.tif")
+
+writeRaster(result$size_3$layer.2, "GitHub/data/remote_sensing/data/raster/indices/texture2.tif")
+
+writeRaster(result$size_3$layer.3, "GitHub/data/remote_sensing/data/raster/indices/texture3.tif")
+````
+
+##Dataframe predictors and response variable
+
+```{r eval=FALSE}
+##load predictors
+
+layer<-list.files("raster/exp_var/", recursive = TRUE, pattern = glob2rx("*.tif"), full.names=TRUE)
+
+rst_layer<- lapply(layer, function(i) {raster(i)})
+
+stack<-stack(rst_layer)
+
+##load response
+
+lyr <- ogrListLayers("shp/muf_training_final/muf_training_final/muf_training_final.shp")
+
+train_sites <- readOGR("shp/muf_training_final/muf_training_final/muf_training_final.shp",
+                       layer = lyr)
+
+train_sites@data$ID<-as.factor(train_sites@data$ID)
+
+
+#create Dataframe
+
+train_sites_rst <- rasterize(train_sites,
+                             stack, field = "ID")
+
+train_sites_rst <- crop(train_sites_rst, extent(stack))
+
+pred_df_all <- as.data.frame(stack[][complete.cases(train_sites_rst[]), ])
+
+resp <- as.factor(train_sites_rst[][complete.cases(train_sites_rst[])])
+
+pred_df_all$resp <- resp
+
+#anyNA(pred_df_all)
+
+dfAll<-na.omit(pred_df_all)
+
+#anyNA(dfAll)
+
+#write.csv(dfAll,"shp/muf_training_final/train_all.csv")
+````
+
+##get rid of highly correlated features
+
+```{r eval=FALSE}
+#correlated features
+
+correlationMatrix<-cor(dfAll[,-which(names(dfAll)%in% ("resp"))])
+
+highlyCorrelated <- caret::findCorrelation(correlationMatrix, cutoff=0.5)
+
+drop_var<-colnames(correlationMatrix)[highlyCorrelated]
+
+dfAll[drop_var]<-NULL
+````
+
+##subset 10% of dataframe fot testing and keep all classes according to theire frequency
+
+```{r eval=FALSE}
+idx <- createDataPartition(as.factor(dfAll$resp), times=1, p=0.1, list=FALSE)
+
+dfSmall <- dfAll[idx,]
+````
+
+##6 times model fitting with 80% train and 20% test and a random forest classifier
+
+```{r eval=FALSE}
+
+k<-6###number of folds
+
+models<-lapply(seq(k), function(i){
+  
+  set.seed(i)
+  
+  ## split data in 80% train and 20% test both containing all classes
+  idx <- createDataPartition(dfSmall$resp, times=1, p=0.8, list=FALSE)
+  
+  mod_train <- dfSmall[idx,]
+  
+  mod_test <- dfSmall[-idx, ]
+  
+  ## recursive feature selection and best model
+ 
+  y<-mod_train[,which(names(dfAll)%in% ("resp"))]
+  
+  x<-mod_train[,-which(names(mod_train)%in% ("resp"))]
+  
+  control <- rfeControl(functions=rfFuncs, method="cv", number=10)
+  
+  preds<- rfe(x,y, rfeControl=control)
+  
+  ## collect some garbage to clean swap
+  gc()
+
+  ##test and calculate Kappa
+  
+  pred2<-predict(preds$fit, mod_test)
+  
+  pred2<-droplevels(pred2)
+  
+  test<-droplevels(as.factor(mod_test$resp))
+  
+  conf<-confusionMatrix(pred2, test)
+  
+  kappa<-compKappa(conf$table)
+  
+  return(list(model=preds$fit, prediction=pred2, confusionMatrix=conf, Kappa=kappa ))
+  
+  })
+
+prediction<-predict(stack, best_model)
+````
