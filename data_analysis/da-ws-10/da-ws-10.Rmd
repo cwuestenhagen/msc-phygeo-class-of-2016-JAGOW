@@ -1,0 +1,119 @@
+---
+title: "da-ws-10"
+author: Jannis Gottwald, Lukas Ditzel, Michaela Vorndran, Maite Lezama Valdez, Alexander
+  Jorns,
+date: "16 Januar 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+## Code
+```{r}
+dat <- read.csv("C:/Users/Michaela Vorndran/Dropbox/Studium/Master/Datenanalyse/Github/msc-phygeo-class-of-2016-MVorndran/data_analysis/data/dwd_stationsdaten_3164_coelbe/produkt_synop_Terminwerte_20060701_20151231_03164.txt", sep = ";", header = TRUE)
+
+#Monatsaggregation
+dat$AGG_M <- substr(dat$MESS_DATUM, 1, 6)
+head(dat$AGG_M)
+
+#Aggregation der Monatsniederschläge
+nd <- aggregate(dat$NIEDERSCHLAGSHOEHE, by=list(dat$AGG_M), FUN= sum)
+colnames(nd) <- c("Date", "precip")
+head(nd)
+
+#try to find an ARIMA model for predicting monthly precipitation data
+#split test (ab Jan 2014) und train (bis Dez 2013)
+time_split <- which(nd$Date == 201312)
+train <- nd[1:time_split,] 
+test <- nd[(time_split+1):(nrow(nd)),] 
+
+#Parameterkombis erstellen und jeweils ein Modell rechnen
+expg <- expand.grid(p=seq(0,5), d=seq(0,2), q=seq(0,5),
+                    ps=seq(0,2), ds=seq(0,2), qs=seq(0,2))
+head(expg)
+
+#model_ready
+precpred <- lapply(seq(nrow(expg)), function(x){
+  armod <- arima(train$precip, order = unlist(expg[x,1:3]), 
+                 seasonal=unlist(expg[x,4:6]), method = "ML")
+  pred <- predict(armod, n.ahead = 24)
+  predn <- unlist(pred$pred)
+  obs <- test$precip
+  rmse <- sqrt(mean((predn-obs)**2))
+  list(rmse, armod)
+  })
+
+#saveRDS(precpred,file=paste0(pfad, "/prediction_best_model.rds"))
+#testprecpred <- readRDS(paste0(pfad, "/prediction_best_model.rds"))
+
+#find optimal model: rmse min 
+v <- lapply(seq(length(precpred)), function(x){
+  v <- precpred[[x]][[1]]
+})
+rmse <- unlist(v)
+min_rmse <- which.min(rmse)
+#best model 
+best <- precpred[[min_rmse]][[2]]
+best
+expg[min_rmse,1:6]
+
+#comparison with forecast auto-arima
+#install.packages("forecast")
+library(forecast)
+auto <- auto.arima(train$precip, max.p = 5, max.d = 2, max.q = 5)
+
+#compare rmse's of self- and autoprediction
+rmse_best <- precpred[[min_rmse]][[1]] 
+rmse_best
+summary(auto)
+
+#results: pedict with retrieved and automatic model (2 plots+observed values)
+#automatic model
+autopred <- predict(auto, n.ahead = 24)
+
+#best retrieved model with parameter test
+selfpred <- predict(best, n.ahead=24)
+
+
+#statement about differences: 
+#While the prediction based on the auto arima seems to describe the testdata rather well, 
+#the prediction based on the "best" arima (as derived by RMSE) fails to predict the data.
+```
+
+## Plots
+
+
+```{r, echo=FALSE}
+
+plot(nd$precip, type="l", col="black", xlim=c(0,115), main="autoprediction", 
+     ylab="monthly precipitation height", xlab="months") 
+lines(autopred$pred, col = "green")
+lines(autopred$pred + autopred$se, col = "grey")
+lines(autopred$pred - autopred$se, col = "grey")
+lines(fitted(auto),col="blue")
+text(20,135, "RMSE: 27.60", cex = 0.8)
+
+
+
+plot(nd$precip, type="l", col="black", xlim=c(0,115), main="prediction with 
+     parameters", ylab="monthly precipitation height", xlab="months")
+lines(selfpred$pred, col = "red")
+lines(selfpred$pred + selfpred$se, col = "grey")
+lines(selfpred$pred - selfpred$se, col = "grey")
+lines(fitted(best), col="blue")
+text(20,135, "RMSE: 28.23", cex = 0.8)
+
+
+legend("bottom", legend=c("observed monthly precipitation", 
+                          "fitted values", "autoprediction",
+                          "prediction with parameters", "standard error"), cex = 0.5,
+       horiz=F, col=c("black", "blue", "green", "red", "gray"), lty = 1)
+```
