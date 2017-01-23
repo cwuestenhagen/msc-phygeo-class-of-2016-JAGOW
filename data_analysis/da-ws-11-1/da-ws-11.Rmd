@@ -1,0 +1,96 @@
+---
+title: "da-ws-11"
+author: Jannis Gottwald, Lukas Ditzel, Michaela Vorndran, Maite Lezama Valdez, Alexander
+  Jorns,
+date: "23 Januar 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+pfad <- ("C:/Users/Michaela Vorndran/Dropbox/Studium/Master/Datenanalyse/Github/msc-phygeo-class-of-2016-MVorndran/data_analysis/da-ws-11-1/daten/")
+dwd <- read.csv(paste0(pfad, "/dwd_stationsdaten_3164_coelbe_80RCakX/produkt_monat_Monatswerte_19460101_20141231_03164.txt"), sep = ";", header = TRUE)
+nao <- read.csv(paste0(pfad, "/noaa_nao_index/noa_norm_1981-2010.txt.txt"), sep = " ", dec = ".", header = TRUE )
+
+
+# Zeitraum zuschneiden. Werte aus Daten abgelesen
+working_frame_dwd <- dwd[(49:540),]
+
+#relevante Größen (Temperatur, Monat) 
+working_frame_dwd <- data.frame(working_frame_dwd$MESS_DATUM_BEGINN, working_frame_dwd$LUFTTEMPERATUR)
+colnames(working_frame_dwd) <- c("MESSDATUM", "LUFTTEMPERATUR")
+
+#Datum kürzen
+working_frame_dwd$MESSDATUM <- substr(working_frame_dwd$MESSDATUM , 1, 6)
+
+
+
+# Aufgabe 1: Bestimmung des Trends
+tso_decompose <- ts(working_frame_dwd$LUFTTEMPERATUR, start = c(1950,1), end = c(1990,12), frequency = 12)
+decomposed_wf <- decompose(tso_decompose)
+
+
+ts <-seq(1950, 1990+11/12, length =length(decomposed_wf$seasonal))
+lmod <- lm(decomposed_wf$trend ~ ts)
+summary(lmod)
+plot(decomposed_wf$trend, ylim=c(0,15))
+abline(lmod, col = "red")
+
+
+#Aufgabe 2
+
+nao$YEAR= nao$YEAR*100+nao$MONTH
+working_frame_nao <- data.frame(nao$YEAR, nao$INDEX)
+colnames(working_frame_nao) <- c("MESSDATUM", "INDEX")
+working_frame_nao <- working_frame_nao[1:492,] 
+
+#Klassifizierung nach größer kleiner 0
+working_frame_nao$N_P[working_frame_nao$INDEX >= 0] <- 1
+working_frame_nao$N_P[working_frame_nao$INDEX < 0] <- -1
+#Kategorisierung der Klassifizierung
+working_frame_nao$N_P <-  factor(working_frame_nao$N_P , labels = c("N", "P"))
+
+#Alternative
+#working_frame_nao$N_P[working_frame_nao$INDEX >= 0] <- "P"
+#working_frame_nao$N_P[working_frame_nao$INDEX < 0] <- "N"
+
+#Saisonalität 1 Jahr/ First Fourier Frequency
+working_frame_nao$fourier_cos <- cos(2*pi* ts)
+working_frame_nao$fourier_sin <- sin(2*pi* ts)
+
+working_frame_nao$DWD_LUFTTEMPERATUR <- working_frame_dwd$LUFTTEMPERATUR
+
+
+#multiple linear model 
+#independent variables: NAO index classes as a factor + first Fourier frequency
+# dependent variable: DWD Lufttemperatur Coelbe
+nao_dwd_lm <- lm( working_frame_nao$DWD_LUFTTEMPERATUR ~ working_frame_nao$N_P + working_frame_nao$fourier_sin + working_frame_nao$fourier_cos )
+summary(nao_dwd_lm)
+nao_model_intercept <- nao_dwd_lm$coefficients[[1]]
+nao_model_intercept
+
+cross_check_NAO <- lapply(seq(1:2000), function(x){
+    set.seed(x)
+    working_frame_nao$rand_N_P = sample(0:1, length(working_frame_nao$MESSDATUM), replace = TRUE)
+    working_frame_nao$rand_N_P <-  factor(working_frame_nao$rand_N_P , labels = c("N", "P"))
+    nao_dwd_lm_test <- lm( working_frame_nao$DWD_LUFTTEMPERATUR ~ working_frame_nao$rand_N_P + working_frame_nao$fourier_sin + working_frame_nao$fourier_cos )
+    nao_dwd_lm_test$coefficients[[1]]
+    
+})
+
+cross_check_unlist <- unlist(cross_check_NAO)
+head(cross_check_unlist)
+summary(cross_check_unlist)
+nao_model_intercept
+# Der Intercept aus dem Modell ist bereits kleiner als der kleinste Intercept aus dem Cross-Check-Modell.
+
+TTest<-t.test((cross_check_unlist - nao_model_intercept))
+print(TTest)
+TTest$p.value
+# Die Intercept-Werte aus dem Cross Check sind signifikat verschieden von dem Intercept-Wert des Modells (8.277572). Das deutet auf einen Einfluss des NAO auf die Temperatur in Coelbe hin.
+```
