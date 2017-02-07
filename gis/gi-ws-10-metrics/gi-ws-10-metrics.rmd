@@ -1,0 +1,273 @@
+---
+title: "gi-ws-10-metrics"
+author: Maite Lezama Valdes, Lukas Ditzel, Alexander Jorns, Jannis Gottwald, Michaela
+  Vorndran
+date: "6 Februar 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE, eval=FALSE}
+knitr::opts_chunk$set(echo = F, eval=F)
+```
+
+####We used the uploaded script to calculate crown related metrics, which can be found in the "crownarea" and respective "crowns" shapefiles.
+
+
+```{r, eval=FALSE}
+# gi-ws-10 main control script 
+# MOC - Advanced GIS (T. Nauss, C. Reudenbach)
+#
+# improved  analysis of trees and crowns
+# see also: https://github.com/logmoc/msc-phygeo-class-of-2016-creuden
+
+#--------- setup the environment ----------------------------------------------
+library(link2GI)
+library(rgdal)
+library(raster)
+library(mapview)
+#install.packages("Momocs")
+library(Momocs)
+
+source("C:/Users/mleza/Documents/msc-phygeo-ws-16/msc-phygeo-class-of-2016-MLezamaValdes/fun/paths.r")
+landcover <- raster(paste0(path_data_rs, "LC_output/geonode-muf_lcc_prediction.tif"))
+#landcover_modal<-focal(landcover, w=matrix(1,9,9), fun=modal)
+#writeRaster(landcover_modal, paste0(path_data_rs, "LC_output/landcover_w9.tif"), overwrite=TRUE)
+landcover_modal <- raster(paste0(path_data_rs, "LC_output/landcover_w9.tif"))
+
+# define the used input file(s)
+dsmFn<-raster(paste0(path_data_gis,"lidar/lidar_dsm_01m.tif"))
+demFn<-raster(paste0(path_data_gis,"lidar/lidar_dem_01m.tif"))
+#chm <- dsm - dem
+
+filepath_base <- "C:/Users/mleza/Documents/msc-phygeo-ws-16/msc-phygeo-class-of-2016-MLezamaValdes/gis/gi-ws-05/scripts/msc-phygeo-class-of-2016-creuden/"
+
+# make a list of relevant functions in the corresponding function folder
+funList <- c(paste0(filepath_base,"fun/","calcTextures.R"),  
+             paste0(filepath_base,"fun/","createMocFolders.R"),
+             #paste0(filepath_base,"fun/", "ffs.R"),             
+             paste0(filepath_base,"fun/","getSessionPathes.R"),
+             paste0(filepath_base,"fun/","gheatMap.R" ),       
+             paste0(filepath_base,"fun/","gPointClust.R"),    
+             paste0(filepath_base,"fun/","ras2vecpoiGRASS.R" ),
+             paste0(filepath_base,"fun/","setPathGlobals.R" )) 
+
+# source relevant functions
+res <- sapply(funList, FUN = source)
+
+# if at a new location create filestructure
+#createMocFolders(filepath_base)
+
+# get the global path variables for the current session
+#getSessionPathes(filepath_git = filepath_base, sessNo = activeSession,courseCode = "gi")
+
+# set working directory
+setwd(paste0(path_data_rs, "LC_output/"))
+pd_gi_run <- paste0(path_data_rs, "LC_output/")
+#pd_gi_run <- "C:/Users/mleza/Documents/msc-phygeo-ws-16/data/remote_sensing/LC_output/test/"
+
+#--------- initialize the external GIS packages --------------------------------
+
+# check GDAL binaries and start gdalUtils
+gdal <- link2GI::linkgdalUtils()
+
+# setup SAGA
+link2GI::linkSAGA(verSelect = T)
+#path_saga_norm <- "C:\\Users\\mleza\\saga_3.0.0_x64\\saga_3.0.0_x64\\"
+#saga_3 <- paste0(path_saga_norm, "saga_cmd.exe")
+
+# (R) read the input file(s) into a R raster
+dsmR<-raster(paste0(path_data_gis,"lidar/lidar_dsm_01m.tif"))
+demR<-raster(paste0(path_data_gis,"lidar/lidar_dem_01m.tif"))
+
+# (R) setup GRASS7
+link2GI::linkGRASS7(demR, verSelect = T)
+-
+#--------- START of the thematic stuff ---------------------------------------
+# 1) calculate a canopy height model (chm)
+# 2) invert it for a watershed analysis
+# 3) optionally smooth it for better crown surfaces
+# 4) apply watershed analysis
+# 5) apply an more sophisticated algorithm for tree top identification
+# 6) calculate some metrics of the crown/tree objects
+# 7) filter and reclassify the derived crown areas
+
+#--------- set vars ----------------------------------------------------------
+#### preclassification thresholds
+#    min tree altitude
+#    min Strahler order
+#    min area of crowns
+#    Gaussian filter sigma value
+#    Gaussian filter radius
+#    Switch for Gaussian filter
+
+# tree-threshold altitude in meter
+thChmAltitude <- 5
+# strahler order threshold if > then secondary treetop
+thStrahler <- 4
+# sqm crownarea
+thCrownArea <- 9
+# sigma for Gaussian filtering of the CHM data
+gsigma <- 1.0
+# radius of Gaussian filter
+gradius <- 3
+# switch for filtering
+gauss <- T
+
+### postclassification thresholds
+#   ratio of width and length of the croen shape
+#   ratio of the longitudinal bias of the shape
+
+# crown width length ratio
+thWidthLengthRatio <- 0.5
+# crown longitudiness 
+thLongitudines <- 0.5
+
+#--------- start core script     ---------------------------------------------
+# (R) calculate canopy height model (chm)
+chmR <- dsmR - demR 
+# (R) invert chm and make positive altitudes
+invChmR <- chmR + raster::minValue(chmR)*-1
+# (R) apply minimum tree heihgt
+invChmR[invChmR < thChmAltitude] <- thChmAltitude
+
+# (R) export to TIF
+raster::writeRaster(invChmR,paste0(pd_gi_run,"iChm.tif"),overwrite=TRUE)
+# (GDAL) convert the TIF to SAGA format
+gdalUtils::gdalwarp(paste0(pd_gi_run,"iChm.tif"), 
+                    paste0(pd_gi_run,"rt_iChm.sdat"), 
+                    overwrite=TRUE,  of='SAGA') 
+
+# (SAGA) apply a gaussian filter 
+#        Gauss is more effective in preserving the tree tops 
+#        AND smoothing the crown area
+sagaCmd <- "C:/Users/mleza/SAGA-GIS/saga_cmd.exe" #so funktioniert SAGA2!!!
+if (gauss) system(paste0(sagaCmd,' grid_filter 1',
+                          ' -INPUT ',pd_gi_run,"rt_iChm.sgrd", #hier darf nicht sdat stehen
+                          ' -RESULT ',pd_gi_run,"rt_iChmGF.sgrd",
+                          ' -SIGMA ',gsigma,
+                          ' -MODE 1',
+                          ' -RADIUS 2'))
+
+# (SAGA) create watershed crowns segmentation using ta_channels 5
+# generates also the nodes of the Strahler network
+system(paste0(sagaCmd, " ta_channels 5 ",
+              " -DEM ",pd_gi_run,"rt_iChmGF.sgrd",
+              " -BASIN ",pd_gi_run,"rt_crown.sgrd",
+              " -BASINS ",pd_gi_run,"rt_crowns.shp",
+              " -SEGMENTS ",pd_gi_run,"rt_segs.shp",
+              " -CONNECTION ",pd_gi_run,"rt_treeNodes.sgrd",
+              " -THRESHOLD 2"))
+
+# ---------- alternative calculation 
+# # (SAGA) create watershed crowns segmentation using imagery_segmentation 0 (same results)
+# # creates everything in one run except the Strahler network
+system(paste0(sagaCmd, " imagery_segmentation 0",
+              " -GRID ",pd_gi_run,"rt_iChm.sgrd",
+              " -SEGMENTS ",pd_gi_run,"rt_segsimagery.sgrd",
+              " -SEEDS ",pd_gi_run,"rt_segsimageryseeds.shp",
+              " -BORDERS ",pd_gi_run,"rt_segsborders",
+              " -DOWN 0", 
+              " -JOIN 0",
+              " -THRESHOLD 0.000000"))
+
+# # (SAGA) create watershed crowns segmentation using imagery_segmentation 0 (same results)
+system(paste0(sagaCmd, " ta_channels 6 ",
+              " -DEM ",pd_gi_run,"rt_iChm.sgrd",
+              " -STRAHLER ",pd_gi_run,"rt_ichmstrahler.sgrd"))
+
+# (gdalUtils) export it to  R as an raster object
+gdalUtils::gdalwarp(paste0(pd_gi_run,"rt_treeNodes.sdat"),
+                    paste0(pd_gi_run,"treeNodes.tif") , 
+                    overwrite = TRUE) 
+gdalUtils::gdal_translate(paste0(pd_gi_run,"rt_treeNodes.sdat"),
+                          paste0(pd_gi_run,"treeNodesraw.xyz") ,
+                          of="XYZ",
+                          overwrite = TRUE) 
+
+# (R) make tree vector data
+trees <- data.frame(data.table::fread(paste0(pd_gi_run,"treeNodesraw.xyz")))
+trees <- trees[trees$V3 > thStrahler,] 
+sp::coordinates(trees) <- ~V1+V2
+sp::proj4string(trees) <- sp::CRS("+proj=utm +zone=32 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs")
+writeOGR(trees, layer = "trees.shp", driver="ESRI Shapefile", dsn = "C:/Users/mleza/Documents/msc-phygeo-ws-16/data/remote_sensing/LC_output", overwrite_layer = TRUE)
+
+# (R) import crown areas from the SAGA analysis
+crownarea <- rgdal::readOGR("C:/Users/mleza/Documents/msc-phygeo-ws-16/data/remote_sensing/LC_output", "rt_crowns")
+
+
+# (R) calculate some crown related metrics https://cran.r-project.org/web/packages/Momocs/Momocs.pdf
+# https://www.researchgate.net/profile/Paul_Rosin/publication/228382248_Computing_global_shape_measures/links/0fcfd510802e598c31000000.pdf?origin=publication_detail
+polys <- crownarea@polygons
+funNnames <- c("area","length","elongation","eccentricityboundingbox","solidity","eccentricityeigen","calliper","rectangularity","circularityharalick","convexity")
+for(subfun in funNnames) { 
+  crownarea@data$subfun <- unlist(lapply(seq(1:length(polys)),function(i){
+    f <- eval(parse(text=paste("Momocs::coo_",subfun,sep = "")))(as.matrix(polys[[i]]@Polygons[[1]]@coords))
+    assign("comp", f)
+    return(unlist(comp))
+  }))
+  colnames(crownarea@data)[ncol(crownarea@data)]<-subfun
+}
+
+# (R) filter by thCrownArea
+crownarea <- crownarea[crownarea@data$area > thCrownArea,]
+
+# (R) postclassify by thLongitudines and thWidthLengthRatio 
+crowns<-crownarea[as.numeric(crownarea@data$solidity) != 1 &  
+                    as.numeric(crownarea@data$elongation) > -thLongitudines & 
+                    as.numeric(crownarea@data$elongation) < thLongitudines & 
+                    as.numeric(crownarea@data$eccentricityboundingbox) > thWidthLengthRatio ,]
+
+writeOGR(crowns, layer = "crowns.shp", driver="ESRI Shapefile", dsn = "C:/Users/mleza/Documents/msc-phygeo-ws-16/data/remote_sensing/LC_output/test", overwrite_layer = TRUE)
+writeOGR(crownarea, layer = "crownarea.shp", driver="ESRI Shapefile", dsn = "C:/Users/mleza/Documents/msc-phygeo-ws-16/data/remote_sensing/LC_output/test", overwrite_layer = TRUE)
+
+# (R) map it 
+#mapview::mapview(trees,cex=2,alpha.regions = 0.3,lwd=1) + 
+#mapview::mapview(crowns,alpha.regions = 
+#0.1,lwd=1)+mapview::mapview(crownarea,alpha.regions = 0.1,lwd=1)
+
+```
+
+####We used the algorithm in an SAGA-3.0.0 as well as an SAGA-2.1.2 environment. In both cases the result shows horizontal stripes as can be seen in the image below.
+
+![](stripes.png)
+
+####Nevertheless the crown segmentation result in the areas where crowns were being calculated seems pretty accurate and the required metrics are being calculated. 
+
+![](metrics.png)
+
+####So we based metrics-calculation on our own approach of identifying crowns. 
+```{r, eval=F}
+
+#our crowns: 
+ocr <- rgdal::readOGR(paste0(path_data_rs, "/LC_output/our_crowns"), "points_per_poly")
+
+#metrics
+polys2 <- ocr@polygons
+funNnames <- c("area","length","elongation","eccentricityboundingbox","solidity","eccentricityeigen","calliper","rectangularity","circularityharalick","convexity")
+for(subfun in funNnames) { 
+  ocr@data$subfun <- unlist(lapply(seq(1:length(polys2)),function(i){
+    f <- eval(parse(text=paste("Momocs::coo_",subfun,sep = "")))(as.matrix(polys2[[i]]@Polygons[[1]]@coords))
+    assign("comp", f)
+    return(unlist(comp))
+  }))
+  colnames(ocr@data)[ncol(ocr@data)]<-subfun
+}
+
+# (R) filter by thCrownArea
+crownarea2 <- ocr[ocr@data$area > thCrownArea,]
+
+# (R) postclassify by thLongitudines and thWidthLengthRatio 
+crowns2<-ocr[as.numeric(ocr@data$solidity) != 1 &  
+                    as.numeric(ocr@data$elongation) > -thLongitudines & 
+                    as.numeric(ocr@data$elongation) < thLongitudines & 
+                    as.numeric(ocr@data$eccentricityboundingbox) > thWidthLengthRatio ,]
+
+rgdal::writeOGR(crowns2, layer = "crowns2.shp", driver="ESRI Shapefile", dsn = "C:/Users/mleza/Documents/msc-phygeo-ws-16/data/remote_sensing/LC_output/test", overwrite_layer = TRUE)
+rgdal::writeOGR(crownarea2, layer = "crownarea2.shp", driver="ESRI Shapefile", dsn = "C:/Users/mleza/Documents/msc-phygeo-ws-16/data/remote_sensing/LC_output/test", overwrite_layer = TRUE)
+
+```
+
+####In this case we get our stripeless crown-distribution with calculated crown metrics. 
+
+![](our_crowns.png)
+![](our_crowns_metrics.png)
