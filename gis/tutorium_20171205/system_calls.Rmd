@@ -1,0 +1,139 @@
+---
+title: "Fusion_Workflow"
+author: "Jannis Gottwald"
+date: "27 November 2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+###Goal for today
+
+Understand the Concept of system calls. Program a function that creates height defined slices of our LIDAR Data and calculates the return density for a raster with 1m cell-sice.
+
+##Command lines
+Look at the following commandlines:
+- Identify sections of the same functionality
+- What is the syntax and how does it diverge from each other?
+
+ grid_filter "Gaussian Filter" -INPUT "/tmp/processing/df73f816e2b2460b8572a0d1f7ffc9f1/dem.sgrd" -SIGMA 1 -MODE 0 -RADIUS 3 -RESULT "/tmp/processing/eb083ae92c8a43c0bcaae689794875ea/RESULT.tif.sgrd"
+
+ 
+Cover /penetration 000263_ground_1m.dtm 000263_grndpen_30m.dtm 2 30 m m 1 10 2 2 000263.las
+
+Now, let`s take a look at the description of the ClipData-Tool in the Fusion Manual.
+Remember-we want to slice our data in to heights
+
+- Which parameters are required as input?
+- How do we get them?
+- create a simple Workflow of the tasks that need to be fulfilled before we can use the 
+  clipData tool to slice our data. 
+  
+  Write it down here:
+  
+### Exercice in flexibility
+
+Look at the following code chunk. It represents the single tasks and at the end, we might get what we need. But imagine you would have to do this every day, with a different dataset. Wouldn´t it bee nice to acomplish the same task with a few lines of code?
+So let us identify all the flexible parts in the code. Define them here:
+
+
+````{r eval=FALSE}
+mainDir <- "C:/Users/user/Projekte/POINTCLOUD_processing" ##my working directory
+inDir <- "/input/"## my input folder
+outDir<- "/temp/"##my output folder
+Fusion<-"C:/FUSION/"
+##Most Fusion tools accept a .txt with a list of files that sholud be processed 
+
+###basic informations
+system(paste0(Fusion, "catalog.exe ",mainDir, inDir, "lidar_files.txt "
+              ,mainDir, outDir, "info_caldern.html"))
+
+###Create a .las with groundpoints only
+system(paste0(Fusion, "clipdata.exe"," /class:2 ",
+              mainDir, inDir, "lidar_files.txt ",
+              mainDir, outDir, "classified_GroundPts.las ",
+             "476000 5631000 478000 5633000"))
+
+### Create the required  PLANS DTM format
+system(paste0(Fusion, "gridsurfacecreate.exe ", 
+              mainDir, outDir, "caldern_GridSurf.dtm ",
+             "1 M M 1 32 0 0 ",mainDir, outDir, "classified_GroundPts.las"))
+
+system(paste0(Fusion, "clipdata.exe","/zmin:10 /zmax:20",
+       " /height /dtm:",mainDir, outDir,"caldern_GridSurf.dtm ",
+       mainDir, inDir, "lidar_files.txt ",
+       mainDir, outDir, "caldern_normalized_point_cloud_LIDAR.las ",
+       "476000 5631000 478000 5633000"))
+```
+
+Now, that we have identified the flexible parts, write a for loop, that creates the required inputs for the slicing tool. Take a look at ?paste0
+
+
+```{r eval=FALSE}
+##my working directory
+mainDir <- "C:/Users/user/Projekte/POINTCLOUD_processing" 
+## my input folder
+inDir <- "/two_tiles/"
+#my output folder for temorary products
+outDir<- "/temp/"
+#my output folder for results
+results<-"/results/"
+#my tool box
+Fusion<-"C:/FUSION/"
+
+##get my data
+las_files<-list.files(paste0(mainDir,inDir), pattern=".las$", full.names=TRUE,recursive = TRUE)
+
+las_names<-list.files(paste0(mainDir,inDir), pattern=".las$", full.names=FALSE,recursive = TRUE)
+
+for (i in las_names){print(i)}
+````
+
+````{r eval=FALSE}
+
+    system(paste0(Fusion, "catalog.exe ",mainDir, inDir,  #inputfile,
+                mainDir, outDir,#outputfile))
+  
+     extent<-read.csv(paste0(mainDir, outDir,#inputfile is the result of catalog))
+     
+     system(paste0(paste0(Fusion, "clipdata.exe"," /class:2 ",
+                mainDir, inDir, #inputfile,
+                mainDir, outDir,#outputfile),
+                #flexible extents
+                )
+     system(paste0(Fusion, "gridsurfacecreate.exe ", 
+             mainDir, outDir, #outputfile,
+             "1 M M 1 32 0 0 ",mainDir, #inputfile))
+   
+```
+How could we do the same thing for flexible heights.
+Create a second for loop that creates slices for 0-2,2-5, 5-10, 10-15, 15-25, 25-30, 30-50 and calculates the return density for a 1m grid
+
+```{r eval=FALSE}
+system(paste0(paste0(Fusion, "clipdata.exe","flexible heights",
+                   " /height /dtm:","flexible input grid",
+                   "flexible input las",
+                   "flexible output las"),
+                   "flexible extent"))
+     
+     system(paste0(Fusion, "returndensity.exe ","/ascii ","flexible output grid",
+                   "1 ",   "flexible input las "))
+````
+##create a function
+
+-what are the two main parameters the function should work with?
+
+
+
+````{r eval=FALSE}
+function_name<-function(param1,param2){
+  for (i in param1){
+    for (j in 1:length(param2)-1){
+      
+    }
+  }
+}
+```
+
+
